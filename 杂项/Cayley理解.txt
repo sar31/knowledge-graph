@@ -1,0 +1,21 @@
+作者：naivehgz
+链接：https://www.zhihu.com/question/24350786/answer/129540252
+来源：知乎
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+我理解的亮点就是存储方式不一样。不是直接存的节点和边。
+用作者的话说，大概是：Graphs are tables,tables are graphs.
+存的是一堆集合。(后端存储是memstore的时候是这么存的，用别的后端存储的时候不确定是不是这样)
+读入RDF文件
+按照每个Subject Predicate Object的内容，用一大堆集合来存。Cayley能支持多种后端，就是用各种后端(主要是k-v数据库)去实现集合。
+比如这个例子
+t.AddQuad(quad.Make("food", "is", "good", nil))  //QuadId 1
+t.AddQuad(quad.Make("phrase of the day", "is of course", "Hello World!", nil))//QuadId 2
+t.AddQuad(quad.Make("cats", "are", "awesome", nil))//QuadId 3
+t.AddQuad(quad.Make("cats", "are", "scary", nil))//QuadId 4
+t.AddQuad(quad.Make("cats", "want to", "kill you", nil))//QuadId 5
+就会建出一堆QuadId的集合 Subject 是 food的集合 Predicate是 is的集合 Object是good的集合 ；插入QuadId1 ... Subject是cats的集合 Predicate是are的集合 Object是awesome的集合；插入QuadId3 Object是scary的集合,前面建的 Subject cat和Predicate are；插入QuadId4 Predicate是want to的集合 Object是kill you的集合
+这样对图的运算就转成了对集合的运算。好处应该是性能强？坏处是删除某个Quadid的时候会很慢吧，要遍历一大堆集合？因为这种大图常见的操作就是找到满足某特征的某类顶点嘛，它这种搞法相当于这些结果都提前存好了。然后找到这些节点沿着某条边走一步的所有节点，就变成了含有某节点的Quad集合 交上 含有那条边的Quad集合得到的交集对每个Quad取Object。就完事了。避免了遍历整个大图。
+另外的亮点就是迭代器优化吧。Cayley定义了一堆集合上的运算。然后查询语句就会变成由这些运算组成的抽象迭代器树，然后不同后端在实现这个抽象迭代器树的时候可以进行针对性的优化。
+
+还有就是前端查询语言比较好学吧。Javascript实现的Gremlin，就10几个基本的函数，10分钟也就学会了。
